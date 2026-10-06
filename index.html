@@ -855,3 +855,649 @@
   </script>
 </body>
 </html>
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Evidence Quiz</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Source+Sans+3:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f3efe2;          /* warm parchment */
+      --card: #fffdf6;
+      --olive: #6b6b3a;       /* main olive */
+      --olive-dark: #4f4f2a;
+      --olive-light: #e6e4cc;
+      --brown: #6b5236;
+      --brown-dark: #4a3826;
+      --gold: #b8a46a;
+      --text: #2e2a1f;
+      --muted: #7a7260;
+      --right: #e3ead0;
+      --wrong: #f1dccd;
+      --wrong-edge: #a0522d;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text);
+           font-family: "Source Sans 3", system-ui, sans-serif; font-size: 17px; line-height: 1.5; }
+    .wrap { max-width: 680px; margin: 0 auto; padding: 24px 16px 48px; }
+
+    /* Header with gavel */
+    header { display: flex; align-items: center; gap: 14px; background: var(--olive); color: #fbf8ec;
+             border-radius: 24px; padding: 18px 22px; box-shadow: 0 6px 18px rgba(74,56,38,.18); }
+    header svg { width: 56px; height: 56px; flex-shrink: 0; background: #fbf8ec; border-radius: 50%; padding: 6px; }
+    header h1 { margin: 0; font-family: "Playfair Display", Georgia, serif; font-size: 1.6em; line-height: 1.1; }
+    header p { margin: 2px 0 0; opacity: .85; font-size: .95em; }
+
+    .bar { display: flex; justify-content: space-between; align-items: center; margin: 18px 4px 10px; color: var(--muted); }
+    #score { background: var(--olive-light); color: var(--olive-dark); font-weight: 600; padding: 6px 14px; border-radius: 999px; }
+
+    .card { background: var(--card); border-radius: 24px; padding: 22px; box-shadow: 0 4px 14px rgba(74,56,38,.10); }
+    #question, #stem { font-size: 1.15em; margin: 0 0 18px; white-space: pre-wrap; }
+
+    /* Rounded answer buttons */
+    #choices { display: grid; gap: 10px; }
+    .grid2 { grid-template-columns: 1fr 1fr; }
+    #choices button { font: inherit; text-align: left; padding: 12px 16px; border-radius: 16px; cursor: pointer;
+                      background: #fff; color: var(--text); border: 2px solid var(--olive-light); transition: all .15s; }
+    .grid2 button { text-align: center !important; border-radius: 999px !important; }
+    #choices button:hover { border-color: var(--olive); background: #fafaf0; }
+    #choices button.right { background: var(--right); border-color: var(--olive); }
+    #choices button.wrong { background: var(--wrong); border-color: var(--wrong-edge); }
+
+    /* Feedback with a little gavel that strikes */
+    .verdict { display: none; align-items: center; gap: 10px; margin-top: 18px; padding: 12px 16px;
+               border-radius: 18px; font-weight: 600; }
+    .verdict.show { display: flex; }
+    .verdict.ok { background: var(--right); color: var(--olive-dark); }
+    .verdict.no { background: var(--wrong); color: #7a3a1e; }
+    .verdict svg { width: 34px; height: 34px; flex-shrink: 0; }
+    .verdict.show svg g { transform-origin: 26px 24px; animation: strike .45s ease-out; }
+    @keyframes strike { 0% { transform: rotate(-35deg); } 50% { transform: rotate(-60deg); } 100% { transform: rotate(-35deg); } }
+    #explain { margin: 12px 4px 0; }
+    #check { display: none; margin-top: 12px; background: #f6edd0; border-radius: 16px; padding: 10px 14px; color: var(--brown-dark); }
+    #missed { padding-left: 20px; }
+    #missed li { margin-bottom: 10px; }
+
+    .nav { display: flex; gap: 10px; margin-top: 18px; }
+    .nav button { flex: 1; font: inherit; font-weight: 600; padding: 14px; border: none; border-radius: 999px; cursor: pointer;
+                  background: var(--brown); color: #fbf8ec; box-shadow: 0 4px 10px rgba(74,56,38,.2); }
+    .nav button:hover { background: var(--brown-dark); }
+    #retry { background: var(--olive); }
+    footer { text-align: center; color: var(--muted); font-size: .85em; margin-top: 28px; }
+  </style>
+
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <svg viewBox="0 0 64 64" aria-hidden="true"><rect x="30" y="52" width="30" height="7" rx="3" fill="#4a3826"/><rect x="34" y="47" width="22" height="6" rx="3" fill="#6b5236"/><g transform="rotate(-35 26 24)"><rect x="24" y="28" width="5" height="30" rx="2.5" fill="#8a6a45"/><rect x="10" y="14" width="33" height="15" rx="5" fill="#6b5236"/><rect x="14" y="13" width="4" height="17" rx="1.5" fill="#b8a46a"/><rect x="35" y="13" width="4" height="17" rx="1.5" fill="#b8a46a"/></g></svg>
+      <div>
+        <h1>Evidence Quiz</h1>
+        <p>Assessment Test #1 · practice</p>
+      </div>
+    </header>
+    <div class="bar">
+      <span id="progress"></span>
+      <span id="score">Score: 0 / 0</span>
+    </div>
+    <div class="card">
+      <div id="stem"></div>
+      <div id="choices"></div>
+      <div id="feedback" class="verdict"><svg viewBox="0 0 64 64" aria-hidden="true"><rect x="30" y="52" width="30" height="7" rx="3" fill="#4a3826"/><rect x="34" y="47" width="22" height="6" rx="3" fill="#6b5236"/><g transform="rotate(-35 26 24)"><rect x="24" y="28" width="5" height="30" rx="2.5" fill="#8a6a45"/><rect x="10" y="14" width="33" height="15" rx="5" fill="#6b5236"/><rect x="14" y="13" width="4" height="17" rx="1.5" fill="#b8a46a"/><rect x="35" y="13" width="4" height="17" rx="1.5" fill="#b8a46a"/></g></svg><span id="verdict-text"></span></div>
+      <p id="explain"></p>
+      <p id="check"></p>
+      <ul id="missed"></ul>
+      <div class="nav">
+        <button id="next" onclick="nextQuestion()">Next question</button>
+        <button id="retry" onclick="retryMissed()" style="display:none">Retry missed only</button>
+      </div>
+    </div>
+    <footer>Answers are drafts. Check flagged ones against your notes.</footer>
+  </div>
+  <script>
+    // ---- THE DATA ----
+    // Each question: n (number), stem, choices (A-D), answer (0=A, 1=B, 2=C, 3=D),
+    // rule, why, and check (a note if the answer key should be double-checked, or null).
+    const allQuestions = [
+ {
+  "n": 1,
+  "stem": "While driving to work, a woman was rear-ended when she pulled up to a stoplight. The woman suffered serious injuries to her neck, and she was forced to miss several months of work. She sued the driver of the other vehicle for damages resulting from her physical injuries and loss of income. At trial, the woman’s attorney calls the defendant’s coworker to the stand. In response to an unrelated question, the coworker testifies that the defendant is careless when he drives. The defendant’s attorney objects and moves to strike the testimony.\n\nThe motion to strike should be",
+  "choices": [
+   "granted since the testimony suggests a propensity and is unduly prejudicial.",
+   "granted because the testimony is irrelevant.",
+   "denied because the objection was late.",
+   "denied because propensity evidence is admissible when character is at issue."
+  ],
+  "answer": 0,
+  "rule": "FRE 404(a)(1)",
+  "why": "Testimony that the defendant is a careless driver is character evidence offered to show he acted carelessly this time. That's barred propensity evidence, and character isn't an element of a negligence claim.",
+  "check": null
+ },
+ {
+  "n": 2,
+  "stem": "A plaintiff sued a defendant for battery. The plaintiff and the defendant were in a barroom altercation, during which the defendant punched the plaintiff in the chest. Prior to trial, the defendant concedes the plaintiff’s damages, and only contests liability. At trial, the plaintiff’s attorney attempts to introduce pictures of the plaintiff’s injuries. The defense attorney objects.\n\nUnder California law, the proffered evidence should be",
+  "choices": [
+   "excluded because it is irrelevant.",
+   "excluded because it is prejudicial to the defendant.",
+   "admitted because the defendant did not concede damages in her answer to the plaintiff’s complaint.",
+   "admitted because the pictures are probative of the severity of the plaintiff’s injuries."
+  ],
+  "answer": 0,
+  "rule": "Cal. Evid. Code §§ 210, 350",
+  "why": "Under California law, relevant evidence must bear on a disputed fact. The defendant conceded damages, so photos offered to show the injuries go to an undisputed issue and are irrelevant.",
+  "check": "California-specific. Under the FRE, conceded facts can still be relevant (403 does the work instead)."
+ },
+ {
+  "n": 3,
+  "stem": "A defendant was charged with possession of a controlled substance with intent to sell. The defendant denies that he possessed a controlled substance. At trial, during its case-in-chief, the prosecution proffers evidence that the defendant was previously convicted in federal court of selling a controlled substance in interstate commerce. Defense counsel objects.\n\nThe trial court should",
+  "choices": [
+   "overrule the objection because the evidence has probative value.",
+   "overrule the objection because the evidence shows the plaintiff’s propensity to commit related offenses.",
+   "overrule the objection because the defendant opened the door to the evidence.",
+   "sustain the objection."
+  ],
+  "answer": 3,
+  "rule": "FRE 404(b)(1)",
+  "why": "The prior conviction is offered in the case-in-chief to show the defendant is the kind of person who deals drugs. That's propensity. He hasn't testified or offered character evidence, so the door isn't open.",
+  "check": null
+ },
+ {
+  "n": 4,
+  "stem": "A man was injured while riding a rollercoaster. The man sued the ride’s operator, claiming that she failed to properly secure his over-the-shoulder restraint. The operator filed a third-party complaint against the rollercoaster’s manufacturer, alleging a product defect. At trial, the operator plans to introduce video footage from a security camera. The operator makes an offer of proof, claiming that the footage shows that on the 50 occasions leading up to the accident, she properly fastened riders’ restraints and double-checked that they were secure. The video cuts out just as the man is boarding the ride, and thus does not confirm if the operator properly secured the man’s restraint on the subject occasion.\n\nThe video footage should be",
+  "choices": [
+   "admitted because it tends to prove the operator’s habit of properly securing riders’ restraints.",
+   "admitted because it shows the operator is a responsible and careful employee.",
+   "excluded because evidence of specific acts of conduct is inadmissible.",
+   "excluded because it is irrelevant to the operator’s interactions with the man who was injured."
+  ],
+  "answer": 0,
+  "rule": "FRE 406",
+  "why": "Fifty consecutive, consistent instances of the same specific act show a routine practice, which is habit. Habit is admissible to prove she acted the same way on this occasion.",
+  "check": null
+ },
+ {
+  "n": 5,
+  "stem": "While shopping in the garden section of a home improvement store, the plaintiff slipped and fell in a puddle of water, injuring her knee and back. Plaintiff sued the store for negligence. The store claimed the plaintiff was comparatively negligent. At trial, during cross-examination, the defendant’s attorney asks the plaintiff, “Isn’t it true that you were running through the aisle when you fell?” The plaintiff’s attorney objects to the form of the question.\n\nThe trial judge should",
+  "choices": [
+   "sustain the objection because the question is argumentative.",
+   "sustain the objection because the question is leading.",
+   "overrule the objection because it is permissible on cross-examination.",
+   "overrule the objection because the plaintiff has firsthand knowledge of whether she was running."
+  ],
+  "answer": 2,
+  "rule": "FRE 611(c)",
+  "why": "Leading questions are ordinarily allowed on cross-examination. Nothing about this question is argumentative.",
+  "check": null
+ },
+ {
+  "n": 6,
+  "stem": "A patient was seriously injured during a routine cataract surgery. The patient sued the eye surgeon for medical malpractice, alleging that the doctor failed to use the applicable standard of care when conducting the surgery. While questioning a fellow ophthalmologist at the defendant’s practice, the patient’s attorney asks, “Doctor, among your colleagues, is the defendant considered to be an ordinarily skillful and learned ophthalmologist?”\n\nThe question is",
+  "choices": [
+   "proper because the solicited testimony would tend to make it more or less likely that the defendant was negligent when he conducted the surgery.",
+   "proper because the plaintiff may solicit reputation testimony in his case-in-chief.",
+   "improper because the witness’s answer would be irrelevant.",
+   "improper because the solicited testimony is prohibited character evidence."
+  ],
+  "answer": 3,
+  "rule": "FRE 404(a)(1), 405",
+  "why": "Reputation among colleagues for being 'skillful and learned' is character evidence offered to prove the doctor acted with care during this surgery. Character isn't an element of malpractice, so it's barred.",
+  "check": null
+ },
+ {
+  "n": 7,
+  "stem": "A defendant was charged with murder. The defendant is a butcher by trade, and it is crucial to the prosecution’s case to prove that the victim was stabbed to death with a butcher’s knife. The prosecution calls a police officer to the stand. The deputy district attorney marks a photograph of the murder victim for identification and is ready to question the officer. Before the prosecutor proceeds, defense counsel objects to the use of the photo, which shows 14 stab wounds to the victim’s body. Defense counsel points to other evidence that has definitively established that the victim was stabbed with a butcher’s knife.\n\nThe photo is",
+  "choices": [
+   "admissible for the limited purpose of showing that the stab wounds resulted from a butcher’s knife.",
+   "admissible because it is relevant to the prosecution’s case, and all relevant evidence is admissible.",
+   "admissible because the photo would not be cumulative or prejudicial.",
+   "inadmissible under Federal Rule of Evidence 403."
+  ],
+  "answer": 3,
+  "rule": "FRE 403",
+  "why": "Other evidence has already definitively proved the butcher-knife point, so the photo's probative value is minimal. The gruesome 14-wound image creates a danger of unfair prejudice and is cumulative.",
+  "check": null
+ },
+ {
+  "n": 8,
+  "stem": "A defendant was charged with a gang-related murder. The defendant is accused of shooting a member of a rival gang in a drive-by. At trial, the prosecution introduced evidence that plainly established that the defendant holds a deep animosity toward members of the rival gang. The prosecutor then calls a witness to the stand, and attempts to solicit testimony that, on a separate occasion, the defendant assaulted a member of the rival gang, causing him serious bodily injury. Defense counsel objects, and the prosecutor replies that the testimony shows motive.\n\nThe testimonial evidence should be",
+  "choices": [
+   "admitted as probative of a fact of consequence to the case.",
+   "excluded because evidence of past bad acts may never be introduced.",
+   "excluded because its probative value is substantially outweighed by the danger of unfair prejudice and needlessly presenting cumulative evidence.",
+   "excluded for violating the propensity rule."
+  ],
+  "answer": 2,
+  "rule": "FRE 403, 404(b)(2)",
+  "why": "Motive is a proper 404(b) purpose, but motive has already been plainly established. The prior assault adds little and carries heavy prejudice, so 403 excludes it as cumulative and unfairly prejudicial.",
+  "check": null
+ },
+ {
+  "n": 9,
+  "stem": "A woman was driving down an interstate highway when a man swerved into her lane, causing a crash. The woman suffered physical injuries and damage to her vehicle.\n\nOne month after the accident, the man sent the woman a letter, in which he stated, “Please send me the bill for any medical expenses your insurance failed to cover. I’m also willing to talk with you about any other financial harm you’ve suffered. I’m sure we can reach an agreement here and avoid the hassle of going to court.”\n\nThe woman later filed a lawsuit, claiming the man’s negligence caused the automobile accident.\n\nAt trial, the plaintiff attempts to introduce the letter she received from the man. The defense objects.\n\nThe evidence should be",
+  "choices": [
+   "admitted because the evidence is probative.",
+   "admitted because the evidence makes it more likely that the man caused the accident, since it tends to prove consciousness of guilt.",
+   "excluded because the evidence is not admissible to prove the plaintiff’s claim or liability for her injuries.",
+   "excluded because the evidence does not comply with the Best Evidence Rule."
+  ],
+  "answer": 2,
+  "rule": "FRE 408, 409",
+  "why": "The letter offers to pay medical expenses (409) and proposes a settlement to avoid court (408). Neither is admissible to prove liability.",
+  "check": null
+ },
+ {
+  "n": 10,
+  "stem": "A judge attended a local men’s club meeting. In introducing the judge to the club’s members, the club president said, “Gentlemen, I take great pleasure in presenting the judge, who we all know is the best judge money can buy!”\n\nThe judge sued the club president for slander. If the club president pleads truth as a defense, he may NOT properly introduce evidence to show",
+  "choices": [
+   "the judge has a reputation for dishonesty in the community.",
+   "the judge was convicted of bribery three years earlier.",
+   "the judge, though not convicted, embezzled money from a former employer before being elected to the bench.",
+   "the judge was convicted for felony assault 12 years earlier."
+  ],
+  "answer": 3,
+  "rule": "FRE 405(b), 401",
+  "why": "The statement accuses the judge of being corrupt, so his character for honesty is an essential element of the truth defense and may be proved by reputation, opinion or specific acts. A felony assault conviction says nothing about corruption, so it's irrelevant.",
+  "check": null
+ },
+ {
+  "n": 11,
+  "stem": "A man is on trial for securities fraud. He takes the stand to testify on his own behalf. On direct examination, the defense attorney proffers evidence of the man’s good character.\n\nUpon objection by the prosecution, which of the following statements is correct?",
+  "choices": [
+   "The defendant may introduce evidence to show that he is generous.",
+   "The defendant may introduce evidence to show that he is honest.",
+   "The defendant may not introduce evidence to show honesty because character evidence is inadmissible.",
+   "The defendant may not introduce evidence of generosity unless it is inquired into on cross-examination."
+  ],
+  "answer": 1,
+  "rule": "FRE 404(a)(2)(A)",
+  "why": "A criminal defendant may offer evidence of a pertinent character trait. Honesty is pertinent to securities fraud. Generosity isn't.",
+  "check": null
+ },
+ {
+  "n": 12,
+  "stem": "A defendant was charged with possession of a controlled substance. The defendant concedes possession, but contends that he was unaware the substance was a controlled substance. At trial, the prosecution proffers evidence that the defendant sold controlled substances on two prior occasions. The court agrees that the evidence is admissible to show the defendant’s knowledge.\n\nUnder California law, which of the following statements is correct?",
+  "choices": [
+   "The evidence is admissible only if the jury could reasonably conclude beyond a reasonable doubt that the defendant committed the prior offenses.",
+   "The evidence is admissible, provided that the court finds that the prosecution proved by a preponderance of the evidence that the defendant committed the prior offenses.",
+   "The evidence is admissible if the jury could reasonably find that the defendant committed the prior offenses by a preponderance of the evidence.",
+   "The evidence is admissible only if prosecution proves by clear and convincing evidence that the defendant committed the prior offenses."
+  ],
+  "answer": 2,
+  "rule": "Cal. Evid. Code § 403; People v. Garceau",
+  "why": "Prior acts offered for a non-propensity purpose like knowledge come in if the jury could reasonably find, by a preponderance of the evidence, that the defendant committed them. The FRE standard under Huddleston is the same.",
+  "check": "California-specific. Check your notes on the exact case your professor uses."
+ },
+ {
+  "n": 13,
+  "stem": "A woman is charged with tax fraud. She wishes to offer evidence that she was honest while she was running for mayor. During her political campaign, the woman refused to lie about a psychiatric problem that she had endured in the past, and her honesty cost her the election. The woman was quoted as saying, “If I had lied, I would be mayor today; but that is no way to win an election.”\n\nIf the prosecutor objects, what is the BEST argument he can make to the judge?",
+  "choices": [
+   "Character evidence is not admissible unless character is at issue.",
+   "One incident is insufficient to prove character.",
+   "The evidence is a waste of time.",
+   "This is an impermissible way for the defendant to prove character."
+  ],
+  "answer": 3,
+  "rule": "FRE 405(a)",
+  "why": "When character isn't an essential element, a defendant proves a pertinent trait only by reputation or opinion. Specific instances, like refusing to lie during the campaign, are an improper method.",
+  "check": null
+ },
+ {
+  "n": 14,
+  "stem": "The driver of a vehicle, while making a right turn at a four-way stop, hit a pedestrian in a crosswalk. The pedestrian sued for personal-injury damages. At trial, the driver testifies that he pulled up to the stop sign at a reasonable speed, came to a complete stop, then proceeded to make a right turn. In a follow-up question, the pedestrian’s attorney asks, “After you screeched to a halt, did you look right before making the turn?” Opposing counsel objects.\n\nThe question is",
+  "choices": [
+   "proper because the driver is a hostile witness.",
+   "proper because the driver opened the door to the question.",
+   "improper because it mischaracterizes the driver’s testimony.",
+   "improper because it is ambiguous."
+  ],
+  "answer": 2,
+  "rule": "FRE 611(a)",
+  "why": "The driver testified he stopped at a reasonable speed. 'After you screeched to a halt' mischaracterizes that testimony and assumes a fact not in evidence.",
+  "check": null
+ },
+ {
+  "n": 15,
+  "stem": "In an automobile accident case, the defendant claims that the plaintiff was comparatively negligent by driving at an excessive speed. The defendant’s attorney calls its first witness, who was standing along the side of the road when the parties’ cars collided. The defendant’s attorney asks the witness, “In your estimation, was the plaintiff traveling at a speed of about 50 m.p.h. at the time of the accident?” The plaintiff’s attorney objects.\n\nThe trial judge should",
+  "choices": [
+   "overrule the objection because the judge may take judicial notice of the speed limit within the jurisdiction.",
+   "overrule the objection if the witness has already been shown to be an experienced driver who was able to estimate the approximate speed of moving vehicles.",
+   "sustain the objection if the witness has not been qualified as an expert.",
+   "sustain the objection because the question is leading and the witness is not an adverse witness."
+  ],
+  "answer": 3,
+  "rule": "FRE 611(c)",
+  "why": "This is direct examination of a friendly witness, and the question suggests the answer (50 m.p.h.). Lay witnesses can estimate speed under 701, but the form of this question is leading.",
+  "check": null
+ },
+ {
+  "n": 16,
+  "stem": "A defendant was charged with killing a victim at a rest stop. The defendant claimed that he acted in self-defense when he was attacked by the victim. At trial, the defendant calls a witness who testifies that he saw the altercation and that the victim was the first aggressor. The witness further testifies that he has known the defendant for 10 years and that the defendant is a peaceable man. The prosecutor then offers the testimony of the victim’s brother-in-law, who proposes to testify that the victim was a peaceable person.\n\nUpon objection by defense counsel, the brother-in-law’s testimony is",
+  "choices": [
+   "admissible for the purpose of repudiating the defendant’s contention that he was a peaceable person.",
+   "admissible for the purpose of rebutting the defendant’s claim that the victim was the first aggressor.",
+   "inadmissible because the victim’s character cannot be proved by the brother-in-law’s opinion testimony.",
+   "inadmissible because the defendant did not directly attack the victim’s character."
+  ],
+  "answer": 1,
+  "rule": "FRE 404(a)(2)(C)",
+  "why": "In a homicide case, once the defense offers evidence that the victim was the first aggressor, the prosecution may offer evidence of the victim's peacefulness to rebut it. Opinion testimony is a proper form.",
+  "check": null
+ },
+ {
+  "n": 17,
+  "stem": "A defendant is charged with armed robbery. The prosecution introduces evidence that the perpetrator, wearing a mask, robbed the victim at gunpoint at approximately 10 pm. The defendant testifies that he was watching a movie on the night of the robbery, which started at 8:30 pm and ended at 10:45 pm. Defendant’s counsel then attempts to introduce evidence of a movie ticket stub to support the alibi defense. The prosecutor objects, arguing that the ticket stub is irrelevant because it “could have come from anywhere.”\n\nWhich of the following standards should the trial court apply in ruling on the prosecution’s objection?",
+  "choices": [
+   "Whether the evidence conclusively proves that the defendant’s alibi is true.",
+   "Whether the evidence makes it more likely than not that the defendant’s alibi is true.",
+   "Whether the evidence has any tendency to make the defendant’s alibi more probable than it would be without the evidence.",
+   "Whether a reasonable juror would find the evidence to be determinative of whether the defendant’s alibi is true."
+  ],
+  "answer": 2,
+  "rule": "FRE 401",
+  "why": "The relevance threshold is low: any tendency to make a fact of consequence more or less probable. Doubts about where the stub came from go to weight, not admissibility.",
+  "check": null
+ },
+ {
+  "n": 18,
+  "stem": "A defendant is on trial for perjury. She denies making a false statement. The prosecutor, to rebut the defense, calls the defendant’s neighbor to the stand. After the neighbor testifies about his decades-long relationship with the defendant, the prosecutor asks, “Based on your extensive interactions with the defendant, would you say she is a dishonest person?”\n\nThe witness’s answer is",
+  "choices": [
+   "admissible because the trait of honesty is pertinent to the charge of perjury.",
+   "admissible because opinion testimony, unlike specific acts of conduct, is a proper form of character evidence.",
+   "inadmissible because it violates the propensity rule.",
+   "inadmissible because the question lacks foundation."
+  ],
+  "answer": 2,
+  "rule": "FRE 404(a)(1)",
+  "why": "The prosecution can't open the door to a defendant's character. The defendant only denied the charge. She didn't offer evidence of her honesty, so the prosecution can't attack it in rebuttal.",
+  "check": "If the defendant testified, the prosecution could attack her character for truthfulness with opinion testimony under FRE 608(a), which could change the answer."
+ },
+ {
+  "n": 19,
+  "stem": "While shopping at a supermarket, a plaintiff slipped and fell in a puddle of water that had leaked from an ice machine, injuring her knee and back. The plaintiff sued the store for negligence. The store claimed the injury was not reasonably foreseeable, and that the ice machine “had worked properly.” At trial, the plaintiff sought to introduce evidence that the store replaced the ice machine two days after her fall.\n\nHow should the court rule on the admissibility of the evidence of the ice machine’s replacement?",
+  "choices": [
+   "It is admissible because it tends to show that the store was negligent by not replacing the ice machine earlier.",
+   "It is admissible because it shows that the remedial measure was feasible.",
+   "It is inadmissible under the rule regarding remedial measures.",
+   "It is inadmissible under the rule regarding offers to compromise."
+  ],
+  "answer": 2,
+  "rule": "FRE 407",
+  "why": "Replacing the machine is a subsequent remedial measure and can't be used to prove negligence. The store didn't dispute feasibility, so the feasibility exception doesn't apply.",
+  "check": null
+ },
+ {
+  "n": 20,
+  "stem": "A plaintiff sued a defendant for battery. The plaintiff and the defendant were in a barroom altercation, during which the defendant punched the plaintiff in the chest. In her answer to the plaintiff’s complaint, the defendant admitted liability but disputed the plaintiff’s alleged damages. At trial, the defendant’s attorney calls a witness to the stand and asks if the plaintiff pushed the defendant before she punched him. The plaintiff’s attorney objects.\n\nThe objection should be",
+  "choices": [
+   "sustained because the testimony is not probative of whether the defendant acted in self-defense.",
+   "sustained because the testimony is irrelevant.",
+   "overruled because the testimony’s probative value outweighs any potentially adverse effects.",
+   "overruled because self-defense is a defense to the tort of battery."
+  ],
+  "answer": 1,
+  "rule": "FRE 401, 402",
+  "why": "The defendant admitted liability, so whether the plaintiff pushed first (self-defense) no longer bears on any disputed issue. Only damages are contested.",
+  "check": null
+ },
+ {
+  "n": 21,
+  "stem": "A plaintiff was the varsity boys’ basketball coach at a local high school. After the second game of the season, the plaintiff was suddenly dismissed as the coach for undisclosed reasons. After the dismissal was made public, the local newspaper ran an article discussing the plaintiff’s tenure as coach. The article, which was written by the sports editor, stated, “The plaintiff was a bad role model and morally unfit for the coaching job.”\n\nThe plaintiff brought suit against the newspaper for defamation. At trial, the plaintiff called a player on the basketball team to testify that the plaintiff “was a good role model respected by the players.” In presenting its evidence, the newspaper calls a witness to testify. The witness proposes to testify that he saw the plaintiff give beer to players on three occasions after victories.\n\nUpon objection by the plaintiff’s attorney, the witness’s testimony is",
+  "choices": [
+   "admissible for impeachment purposes only.",
+   "admissible as substantive evidence.",
+   "inadmissible because testifying about specific instances of conduct is an impermissible method of proving character.",
+   "inadmissible to prove character, but admissible for the purpose of showing intent."
+  ],
+  "answer": 1,
+  "rule": "FRE 405(b)",
+  "why": "The article called the plaintiff a bad role model who was morally unfit. When the newspaper pleads truth, the plaintiff's character is an essential element, so specific instances like giving players beer are admissible as substantive evidence.",
+  "check": null
+ },
+ {
+  "n": 22,
+  "stem": "A defendant was charged with burglary. At approximately 2:30 a.m. on the night of the burglary, a resident of the Green Acres housing development found the defendant climbing into his house through a bedroom window. Upon seeing the resident, the defendant fled. The police arrested the defendant the next day.\n\nAt trial, the defendant testified that he had had too much to drink on the night in question, and that, believing he was outside his own home and had locked himself out, he mistakenly attempted to enter the resident’s home through the unlocked window. In response, the prosecution proposes to introduce evidence that, on two prior occasions, the defendant burglarized the homes of residents of Green Acres. The prosecution makes an offer of proof that, between 2:00 and 3:00 am, the defendant entered the houses of the two prior victims through bedroom windows, then stole the victims’ jewelry.\n\nUpon objection from the defendant’s counsel, what is the BEST counterargument the prosecution can make?",
+  "choices": [
+   "The defendant opened the door to character evidence.",
+   "The evidence shows the defendant’s modus operandi and an absence of mistake.",
+   "The prosecution may introduce evidence of past crimes to show character to rebut the defendant’s testimony.",
+   "The evidence is probative of the defendant’s propensity to commit burglary."
+  ],
+  "answer": 1,
+  "rule": "FRE 404(b)(2)",
+  "why": "The two prior burglaries in the same development, at the same hour, through bedroom windows, are distinctive enough to show modus operandi. They also directly rebut his claim that he entered by mistake.",
+  "check": null
+ },
+ {
+  "n": 23,
+  "stem": "A man was arrested and charged with sexually abusing a child. At trial, in its case-in-chief, the prosecution seeks to introduce evidence that the man was previously involved in very similar cases with other children. The prosecution argues that these past crimes help demonstrate the likelihood that the man molested the child in the present case. Defense counsel objects to the evidence regarding the other children.\n\nThe judge should find the evidence",
+  "choices": [
+   "admissible because the man’s past crimes may be introduced to show that he is more likely to have committed the crime for which he is on trial.",
+   "admissible because character may always be proven with evidence of past criminal acts.",
+   "inadmissible because past crimes may not be introduced to prove disposition to commit certain acts.",
+   "inadmissible because the prosecution cannot introduce evidence of the defendant’s bad character in its case-in-chief."
+  ],
+  "answer": 0,
+  "rule": "FRE 414(a)",
+  "why": "In a criminal child-molestation case, evidence that the defendant committed other child molestation is admissible for any relevant purpose, including propensity.",
+  "check": null
+ },
+ {
+  "n": 24,
+  "stem": "A plaintiff sued a defendant for injuries that the plaintiff suffered when he was struck by the defendant’s car. At trial, the plaintiff testified that he was walking across the street inside a crosswalk at the time the defendant’s car hit him. This incident took place in a jurisdiction that has a statute in effect requiring all motorists to stop and permit pedestrians to cross streets at designated crosswalks.\n\nThe defendant testifies that the plaintiff ran into the street outside the crosswalk. The defendant further testifies that he immediately applied his brakes when he saw the plaintiff dart into the street, but that he couldn’t stop his car in time to avoid hitting the plaintiff. In support of the defendant’s testimony, defense counsel calls a neighbor to testify that she has observed the plaintiff frequently during the many years she has lived on the street, and that the plaintiff “always crosses the street outside the crosswalk.”\n\nThe neighbor’s testimony is likely to be",
+  "choices": [
+   "admitted because it tends to show that the plaintiff was a careless person.",
+   "admitted because it is probative of the plaintiff’s habit of crossing the street outside the crosswalk.",
+   "excluded because it is impermissible evidence of character offered to prove the defendant’s conduct on a particular occasion.",
+   "excluded because the neighbor was not an eyewitness to the accident."
+  ],
+  "answer": 1,
+  "rule": "FRE 406",
+  "why": "'Always crosses the street outside the crosswalk,' observed frequently over many years, describes a specific, routine response to a repeated situation. That's habit, not general character for carelessness.",
+  "check": null
+ },
+ {
+  "n": 25,
+  "stem": "A woman and a defendant are college roommates. With the defendant’s permission, the woman borrowed the defendant’s baseball bat to use in an intramural softball game. During the game, the woman struck out with the bases loaded. Angry at herself, she flung the bat into the nearby crowd. The bat struck a fan in the face and fractured his nose.\n\nThe fan sued the defendant, alleging that she was negligent in lending her bat to her roommate when she knew the roommate was irresponsible with bats. At trial, the fan offers evidence that on three other occasions during the past year, the roommate had negligently thrown bats during other softball games.\n\nThe fan’s proffered evidence is",
+  "choices": [
+   "admissible to show that the roommate was negligent on the occasion during which he was injured.",
+   "admissible to show that the roommate was irresponsible in the use of bats.",
+   "inadmissible as improper character evidence.",
+   "inadmissible because character must be proved by reputation or opinion testimony."
+  ],
+  "answer": 1,
+  "rule": "FRE 405(b)",
+  "why": "In a negligent-entrustment claim, the roommate's irresponsibility with bats is an essential element, since the defendant allegedly knew about it. Specific instances are therefore admissible.",
+  "check": null
+ },
+ {
+  "n": 26,
+  "stem": "A defendant was charged with murder. At trial, in her opening statement, the prosecutor tells the jury that the evidence will show that the defendant broke into an office building and shot the victim at his cubicle. In her case-in-chief, the prosecutor attempts to introduce evidence that, prior to the shooting, the defendant stole the murder weapon and ammunition from a nearby firearm store. The defendant is not charged with theft. Defense counsel objects to the prosecution’s proffered evidence.\n\nThe judge should",
+  "choices": [
+   "admit the evidence if offered to prove that the defendant has a tendency to commit serious crimes.",
+   "exclude the evidence because it is irrelevant.",
+   "exclude the evidence because it violates the Dead Man’s Statute.",
+   "admit the evidence if offered to show the defendant’s planning and preparation."
+  ],
+  "answer": 3,
+  "rule": "FRE 404(b)(2)",
+  "why": "Stealing the gun and ammunition before the shooting shows planning and preparation, which are proper non-propensity purposes.",
+  "check": null
+ },
+ {
+  "n": 27,
+  "stem": "A defendant was arrested and charged with burglarizing a home. At trial, the main issue of contention is the identity of the burglar. The state called a homeowner to testify, but her identification testimony was inconclusive. The homeowner testified that she was asleep during the burglary and awoke as the burglar was fleeing, but she didn’t see the burglar’s face. The prosecution then offers evidence that, at the time of the burglary, the defendant needed money to defend himself against other burglary charges.\n\nThe proffered evidence should be",
+  "choices": [
+   "admitted without restriction as probative of motive.",
+   "admitted, provided that the court instructs the jury to limit the use of the evidence to the defendant’s motive to burglarize.",
+   "excluded as lacking any probative value.",
+   "excluded because its probative value is substantially outweighed by the risk of unfair prejudice."
+  ],
+  "answer": 3,
+  "rule": "FRE 403",
+  "why": "Financial need is weak evidence of motive, since most people need money. Here it also reveals that the defendant faces other burglary charges, so the danger of unfair prejudice substantially outweighs its probative value.",
+  "check": "Close call. Some would argue B (admit with a limiting instruction). Check how your professor treated motive and 403."
+ },
+ {
+  "n": 28,
+  "stem": "A university professor is charged with rape. The professor has known the victim, an office administrator in the History Department, for 15 years, and the two have worked together for nearly 5 years. At trial, the professor’s attorney proffers evidence that, on the night of the alleged rape, the victim had sex with a student.\n\nThe evidence is",
+  "choices": [
+   "admissible to support the defense of consent.",
+   "admissible because, under an exception to the propensity rule, a criminal defendant may always attack the victim’s character.",
+   "admissible if offered to show that the defendant was not the source of the victim’s injuries.",
+   "inadmissible for any purpose."
+  ],
+  "answer": 2,
+  "rule": "FRE 412(b)(1)(A)",
+  "why": "The rape shield rule lets the defense offer specific instances of the victim's sexual behavior to prove someone else was the source of semen, injury or other physical evidence. The consent exception covers only behavior with the defendant.",
+  "check": null
+ },
+ {
+  "n": 29,
+  "stem": "A plaintiff sued a defendant for sexual assault in federal court. Three weeks prior to trial, the defendant filed a motion requesting permission to introduce evidence of the plaintiff’s past sexual behavior. The plaintiff has not placed reputation in controversy.\n\nWhich of the following statements is correct?",
+  "choices": [
+   "The court should deny the motion because the defendant, without good cause, failed to timely file the motion.",
+   "The court should deny the motion if the probative value of the evidence is equal to the danger of unfair prejudice and harm to the plaintiff.",
+   "The court should deny the motion because evidence of past sexual behavior is always inadmissible in civil cases.",
+   "The court should grant the motion and admit the evidence if the defendant intends to introduce it via reputation testimony."
+  ],
+  "answer": 1,
+  "rule": "FRE 412(b)(2), (c)",
+  "why": "In a civil case, the evidence is admissible only if its probative value substantially outweighs the harm to the victim and unfair prejudice. If they're equal, the motion should be denied. Three weeks is timely (at least 14 days before trial), and reputation is admissible only if the victim put it in controversy.",
+  "check": null
+ },
+ {
+  "n": 30,
+  "stem": "Two cars were driving within the legal speed limit as they approached an intersection. There are no traffic lights, stop signs, or warnings posted at the intersection. Both vehicles entered the intersection simultaneously and collided. One of the drivers suffered a broken pelvis as a result of the accident. Although the other driver’s truck was slightly damaged, the other driver did not suffer any physical injuries.\n\nThereafter, the injured driver sued the city for negligence, alleging that the city failed to provide adequate warning at the intersection, which she contended is heavily traveled and particularly dangerous. At trial, the driver offers evidence that, on multiple occasions over the past five years, under substantially similar circumstances and road conditions, several other drivers were involved in similar accidents.\n\nUpon objection by the city’s attorney, the evidence should be",
+  "choices": [
+   "admitted as probative of a fact of consequence to the action.",
+   "admitted because evidence of past negligence is always admissible to prove present negligence.",
+   "excluded because the danger of confusing the issues outweighs its probative value.",
+   "excluded because it does not conclusively prove that the city was negligent."
+  ],
+  "answer": 0,
+  "rule": "FRE 401, 403",
+  "why": "Prior accidents under substantially similar conditions are relevant to show the intersection was dangerous and that the city had notice.",
+  "check": null
+ },
+ {
+  "n": 31,
+  "stem": "A man was arrested and charged with sexually abusing a child. At trial, in its case-in-chief, the prosecution seeks to introduce evidence that the man was previously accused of sexual harassment by a woman with whom he works. The prosecution argues that the past offense demonstrates the likelihood that the man molested the child in the present case. Defense counsel objects to the evidence of sexual harassment.\n\nThe judge should find the evidence",
+  "choices": [
+   "admissible because the man’s past offense may be introduced to show that he is more likely to have committed the crime for which he is on trial.",
+   "admissible because, unlike in civil cases, evidence of past wrongs may be introduced in criminal cases.",
+   "inadmissible because the probative value of the past offense is substantially outweighed by the risk of unfair prejudice.",
+   "inadmissible because evidence of past bad acts can never be introduced to prove propensity."
+  ],
+  "answer": 2,
+  "rule": "FRE 403, 404(b), 414",
+  "why": "A sexual-harassment accusation by an adult coworker isn't 'child molestation' under 414, so that propensity exception doesn't apply. D is wrong because 413-415 do allow propensity in some cases. Of the choices given, C is the best.",
+  "check": "Check this one. The real problem is that 414 doesn't reach this conduct, and none of the choices says that directly."
+ },
+ {
+  "n": 32,
+  "stem": "Two youths were charged with murdering a convenience store clerk. At trial, during direct examination, the prosecution’s witness testified that he saw the youths walking into the store as he was starting to make breakfast. The witness further testified that five minutes later, as he was sitting down to eat, he heard a gunshot.\n\nDuring cross-examination, the witness testifies that he had made eggs and grits for breakfast. Defense counsel then asks, “Sir, how could it take you five minutes to cook your grits, when it takes the entire grit-eating world 20 minutes?” The witness answers, “I don’t know. I’m a fast cook, I guess.” Defense counsel continues, “Are we to believe that boiling water soaks into a grit faster in your kitchen than on any place on the face of the earth?!” The prosecutor objects.\n\nThe question is",
+  "choices": [
+   "improper because it is argumentative.",
+   "proper because the witness is an adverse witness.",
+   "proper for impeachment purposes.",
+   "improper because it misstates the witness’s testimony."
+  ],
+  "answer": 0,
+  "rule": "FRE 611(a)",
+  "why": "Defense counsel is arguing with the witness and mocking his answer rather than asking for facts.",
+  "check": null
+ }
+];
+
+    let questions = allQuestions.slice();   // the set we're playing (like list(...) in Python)
+    let current = 0, right = 0, attempts = 0, answered = false, missed = [];
+    const letters = ["A", "B", "C", "D"];
+
+    function el(id) { return document.getElementById(id); }
+
+    function showQuestion() {
+      const q = questions[current];
+      el("progress").textContent = "Question " + q.n + "  (" + (current + 1) + " of " + questions.length + ")";
+      el("stem").textContent = q.stem;
+      el("feedback").className = "verdict";
+      el("explain").textContent = "";
+      el("check").style.display = "none";
+      el("missed").innerHTML = "";
+      el("retry").style.display = "none";
+      el("next").textContent = "Next question";
+      answered = false;
+
+      const box = el("choices");
+      box.innerHTML = "";
+      q.choices.forEach(function (text, i) {
+        const btn = document.createElement("button");
+        
+        btn.textContent = letters[i] + ". " + text;
+        btn.onclick = function () { checkAnswer(i); };
+        box.appendChild(btn);
+      });
+    }
+
+    function checkAnswer(i) {
+      if (answered) return;
+      answered = true;
+      attempts++;
+      const q = questions[current];
+      const buttons = el("choices").children;
+      buttons[q.answer].classList.add("right");
+      if (i === q.answer) {
+        right++;
+        el("feedback").className = "verdict show ok";
+        el("verdict-text").textContent = "Correct: " + letters[q.answer] + "  (" + q.rule + ")";
+      } else {
+        buttons[i].classList.add("wrong");
+        el("feedback").className = "verdict show no";
+        el("verdict-text").textContent = "Not quite. The answer is " + letters[q.answer] + "  (" + q.rule + ")";
+        missed.push(q);
+      }
+      el("explain").textContent = q.why;
+      if (q.check) { el("check").textContent = "Double-check: " + q.check; el("check").style.display = "block"; }
+      el("score").textContent = "Score: " + right + " / " + attempts;
+    }
+
+    function nextQuestion() {
+      current++;
+      if (current < questions.length) showQuestion(); else endRound();
+    }
+
+    function endRound() {
+      el("progress").textContent = "";
+      el("stem").textContent = "Round over! You got " + right + " out of " + questions.length + ".";
+      el("choices").innerHTML = "";
+      el("explain").textContent = "";
+      el("check").style.display = "none";
+      el("feedback").className = "verdict show " + (missed.length ? "no" : "ok");
+      el("verdict-text").textContent = missed.length ? "Review the ones you missed:" : "Perfect round!";
+      const list = el("missed");
+      list.innerHTML = "";
+      for (const q of missed) {
+        const li = document.createElement("li");
+        li.textContent = "Q" + q.n + ": " + letters[q.answer] + " (" + q.rule + "). " + q.why;
+        list.appendChild(li);
+      }
+      el("retry").style.display = missed.length ? "block" : "none";
+      el("next").textContent = "Start over (all 32)";
+      el("next").onclick = function () { startRound(allQuestions.slice()); };
+    }
+
+    function retryMissed() { startRound(missed.slice()); }
+
+    function startRound(set) {
+      questions = set;
+      current = 0; right = 0; attempts = 0; missed = [];
+      el("score").textContent = "Score: 0 / 0";
+      el("next").onclick = nextQuestion;
+      showQuestion();
+    }
+
+    showQuestion();
+  </script>
+</body>
+</html>

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Objection Drill</title>
+  <style>
+    body { font-family: Georgia, serif; max-width: 600px; margin: 40px auto; padding: 0 16px; background: #fdfbf7; color: #222; }
+    #question { font-size: 1.3em; margin: 24px 0; }
+    button { display: block; width: 100%; margin: 8px 0; padding: 12px; font-size: 1em; cursor: pointer; }
+    #feedback { margin-top: 20px; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h1>Objection Drill</h1>
+  <p id="question"></p>
+  <div id="choices"></div>
+  <p id="feedback"></p>
+  <button id="next" onclick="nextQuestion()">Next question</button>
+
+  <script>
+    // ---- STEP 1: THE DATA ----
+    // This is like a Python list of dictionaries.
+    // In Python: questions = [{"text": "...", "answer": "..."}, ...]
+    const questions = [
+      { text: "On direct: \"You saw the defendant run out of the store, didn't you?\"", answer: "Leading" },
+      { text: "\"What did your neighbor tell you about the fight?\"", answer: "Hearsay" },
+      { text: "\"What was the defendant thinking when he left?\"", answer: "Speculation" },
+      { text: "\"Isn't it true you were at the bar, and you had five drinks?\"", answer: "Compound" },
+      { text: "\"How can you possibly expect the jury to believe that?\"", answer: "Argumentative" }
+    ];
+
+    const objections = ["Leading", "Hearsay", "Speculation", "Compound", "Argumentative"];
+
+    let current = 0;   // which question we're on (like an index in Python)
+
+    // ---- STEP 2: SHOW A QUESTION ----
+    // A function, just like Python's "def show_question():"
+    function showQuestion() {
+      const q = questions[current];
+      document.getElementById("question").textContent = q.text;
+      document.getElementById("feedback").textContent = "";
+
+      const box = document.getElementById("choices");
+      box.innerHTML = "";                      // clear old buttons
+
+      for (const name of objections) {         // Python: for name in objections:
+        const btn = document.createElement("button");
+        btn.textContent = name;
+        btn.onclick = function () { checkAnswer(name); };
+        box.appendChild(btn);
+      }
+    }
+
+    // ---- STEP 3: CHECK THE ANSWER ----
+    function checkAnswer(choice) {
+      const correct = questions[current].answer;
+      const feedback = document.getElementById("feedback");
+      if (choice === correct) {                // Python: if choice == correct:
+        feedback.textContent = "Sustained! Correct: " + correct;
+      } else {
+        feedback.textContent = "Overruled. The answer was: " + correct;
+      }
+    }
+
+    // ---- STEP 4: MOVE ON ----
+    function nextQuestion() {
+      current = (current + 1) % questions.length;   // wraps back to 0 at the end
+      showQuestion();
+    }
+
+    showQuestion();   // run once when the page loads
+  </script>
+</body>
+</html>

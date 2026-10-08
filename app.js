@@ -295,7 +295,11 @@ function soundButton() {
 }
 function wireSound() {
   const b = document.getElementById('sound-btn');
-  if (b) b.onclick = () => { soundOn = !soundOn; b.textContent = soundOn ? '🔊' : '🔇'; };
+  if (b) b.onclick = () => {
+    soundOn = !soundOn;
+    b.textContent = soundOn ? '🔊' : '🔇';
+    if (soundOn) playCorrect(); // test chime so she knows sound works
+  };
 }
 
 // ---------- HOME ----------

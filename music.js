@@ -98,19 +98,69 @@ function noteFreq(name, octave = 4) {
   const midi = 12 * (octave + 1) + NATURAL_PC[n.letter] + n.acc;
   return 440 * Math.pow(2, (midi - 69) / 12);
 }
+// Browsers keep audio "asleep" until the person taps something.
+// getAudio() creates the sound engine and wakes it up if it's asleep.
+function getAudio() {
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) return null;
+  if (!audioCtx) audioCtx = new AC();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+
+// iPhone fix: with the side silent switch on, iOS mutes web sounds.
+// Playing a silent looping audio clip tells iOS "this is media" (like a video),
+// so the notes play even in silent mode. Runs once, on the first tap.
+let audioUnlocked = false;
+function silentWavUrl() {
+  const rate = 8000, n = rate / 2; // half a second of silence
+  const buf = new ArrayBuffer(44 + n);
+  const v = new DataView(buf);
+  const str = (o, s) => [...s].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
+  str(0, 'RIFF'); v.setUint32(4, 36 + n, true); str(8, 'WAVE'); str(12, 'fmt ');
+  v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+  v.setUint32(24, rate, true); v.setUint32(28, rate, true); v.setUint16(32, 1, true); v.setUint16(34, 8, true);
+  str(36, 'data'); v.setUint32(40, n, true);
+  for (let i = 0; i < n; i++) v.setUint8(44 + i, 128); // 128 = silence for 8-bit audio
+  return URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
+}
+function unlockAudio() {
+  if (audioUnlocked) return;
+  audioUnlocked = true;
+  try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
+  try {
+    const el = new Audio(silentWavUrl());
+    el.loop = true;
+    el.setAttribute('playsinline', '');
+    const p = el.play();
+    if (p && p.catch) p.catch(() => {});
+  } catch (e) {}
+  const ctx = getAudio();
+  if (ctx) { // a 1-sample silent blip finishes waking the engine on iOS
+    const b = ctx.createBufferSource();
+    b.buffer = ctx.createBuffer(1, 1, 22050);
+    b.connect(ctx.destination);
+    b.start(0);
+  }
+}
+['pointerdown', 'touchend', 'keydown'].forEach(ev =>
+  document.addEventListener(ev, unlockAudio, { passive: true }));
+
 function playFreq(freq, when = 0, dur = 0.35) {
   if (!soundOn) return;
   try {
-    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
-    const t = audioCtx.currentTime + when;
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
+    const ctx = getAudio();
+    if (!ctx) return;
+    const t = ctx.currentTime + 0.02 + when;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
     osc.type = 'triangle';
     osc.frequency.value = freq;
     gain.gain.setValueAtTime(0.0001, t);
-    gain.gain.exponentialRampToValueAtTime(0.25, t + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.35, t + 0.02);
     gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    osc.connect(gain).connect(audioCtx.destination);
+    osc.connect(gain);            // two separate lines: older Safari can't chain .connect()
+    gain.connect(ctx.destination);
     osc.start(t);
     osc.stop(t + dur + 0.05);
   } catch (e) { /* audio not available — stay silent */ }
